@@ -1,0 +1,65 @@
+#line 1 "C:/Users/tyler/dev/WINGG/forge/usdImaging/usdRiImaging/pxrIntMultLightFilterAdapter.h"
+/*
+ * Copyright 2021 Forge. All Rights Reserved.
+ *
+ * The use of this software is subject to the terms of the
+ * Forge license agreement provided at the time of installation
+ * or download, or which otherwise accompanies this software in
+ * either electronic or hard copy form.
+ *
+ * Portions of this file are derived from original work by Pixar
+ * distributed with Universal Scene Description, a project of the
+ * Academy Software Foundation (ASWF). https://www.aswf.io/
+ *
+ * Original Copyright (C) 2016-2021 Pixar.
+ * Modifications copyright (C) 2020-2021 ForgeXYZ LLC.
+ *
+ * Forge. The Animation Software & Motion Picture Co.
+ */
+#ifndef FORGE_USD_IMAGING_USD_RI_IMAGING_FORGE_INTMULT_LIGHT_FILTER_ADAPTER_H
+#define FORGE_USD_IMAGING_USD_RI_IMAGING_FORGE_INTMULT_LIGHT_FILTER_ADAPTER_H
+
+/// \file usdRiImaging/pxrIntMultLightFilterAdapter.h
+
+#include "forge/forge.h"
+#include "forge/usdImaging/usdRiImaging/api.h"
+#include "forge/usdImaging/usdImaging/lightFilterAdapter.h"
+
+FORGE_NAMESPACE_BEGIN
+
+
+class UsdPrim;
+
+/// \class UsdRiImagingPxrIntMultLightFilterAdapter
+///
+/// Adapter class for lights of type PxrIntMultLightFilter
+///
+class UsdRiImagingPxrIntMultLightFilterAdapter : public UsdImagingLightFilterAdapter {
+public:
+    typedef UsdImagingLightFilterAdapter BaseAdapter;
+
+    UsdRiImagingPxrIntMultLightFilterAdapter()
+        : UsdImagingLightFilterAdapter()
+    {}
+
+    USDRIIMAGING_API
+    virtual ~UsdRiImagingPxrIntMultLightFilterAdapter();
+
+    USDRIIMAGING_API
+    virtual SdfPath Populate(UsdPrim const& prim,
+                     UsdImagingIndexProxy* index,
+                     UsdImagingInstancerContext const* instancerContext = NULL);
+
+    USDRIIMAGING_API
+    virtual bool IsSupported(UsdImagingIndexProxy const* index) const;
+
+protected:
+    virtual void _RemovePrim(SdfPath const& cachePath,
+                             UsdImagingIndexProxy* index) final;
+
+};
+
+
+FORGE_NAMESPACE_END
+
+#endif // FORGE_USD_IMAGING_USD_RI_IMAGING_FORGE_INTMULT_LIGHT_FILTER_ADAPTER_H
