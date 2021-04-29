@@ -1,4 +1,4 @@
-WINGGVERSE
+Winggverse
 ==========
 
 .. figure:: https://www.dropbox.com/s/psb2bgi58mmn6x2/wingg-01.png?raw=1
