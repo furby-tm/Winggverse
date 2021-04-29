@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from distutils.spawn import find_executable
+from distutils.dir_util import copy_tree
 
 import argparse
 import textwrap
@@ -10,6 +11,7 @@ import ctypes
 import datetime
 import distutils
 import fnmatch
+import ntpath
 import glob
 import locale
 import multiprocessing
@@ -287,8 +289,8 @@ def RunCMake(context, force, extraArgs = None):
     srcDir = os.getcwd()
     libInstDir = (context.libInstDir)
     buildDir = os.path.join(context.buildDir, os.path.split(srcDir)[1])
-    if force and os.path.isdir(buildDir):
-        shutil.rmtree(buildDir)
+    # if force and os.path.isdir(buildDir):
+    #     shutil.rmtree(buildDir)
 
     if not os.path.isdir(buildDir):
         os.makedirs(buildDir)
@@ -389,6 +391,21 @@ def PatchFile(filename, patches, multiLineMatches=False):
                   .format(filename=filename, oldFilename=filename + ".old"))
         shutil.copy(filename, filename + ".old")
         open(filename, 'w').writelines(newLines)
+
+def InstallDependency(src, dest):
+    src = context.libInstDir + src
+    dest = context.libInstDir + dest
+    try:
+        os.remove(dest)
+    except:
+        if os.path.exists(dest):
+            shutil.rmtree(dest)
+
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    try:
+        copy_tree(src, dest)
+    except:
+        shutil.copyfile(src, dest)
 
 def DownloadFileWithCurl(url, outputFilename):
     # Don't log command output so that curl's progress
@@ -510,8 +527,8 @@ def DownloadURL(url, context, force, dontExtract = None):
 
             with archive:
                 extractedPath = os.path.abspath(rootDir)
-                if force and os.path.isdir(extractedPath):
-                    shutil.rmtree(extractedPath)
+                # if force and os.path.isdir(extractedPath):
+                #     shutil.rmtree(extractedPath)
 
                 if os.path.isdir(extractedPath):
                     PrintInfo("Directory {0} already exists, skipping extract".format(extractedPath))
@@ -585,9 +602,14 @@ def AnyPythonDependencies(deps):
 ZLIB_URL = "https://github.com/madler/zlib/archive/refs/tags/v1.2.11.zip"
 
 def InstallZlib(context, force, buildArgs):
-    context.libInstDir = INSTALL_DIR + "/zlib1.2.11"
     with CurrentWorkingDirectory(DownloadURL(ZLIB_URL, context, force)):
         RunCMake(context, force, buildArgs)
+
+        InstallDependency("/bin/zlib.dll",       "/zlib/bin/zlib.dll")
+        InstallDependency("/lib/zlib.lib",       "/zlib/lib/zlib.lib")
+        InstallDependency("/lib/zlibstatic.lib", "/zlib/lib/zlibstatic.lib")
+        InstallDependency("/include/zlib.h",     "/zlib/include/zlib.h")
+        InstallDependency("/include/zconf.h",    "/zlib/include/zconf.h")
 
 ZLIB = Dependency("zlib", InstallZlib, "include/zlib.h")
 
@@ -719,7 +741,7 @@ BOOST = Dependency("boost", InstallBoost, BOOST_VERSION_FILE)
 if Windows():
     TBB_URL = "https://github.com/oneapi-src/oneTBB/releases/download/v2021.1.1/oneapi-tbb-2021.1.1-win.zip"
 else:
-    TBB_URL = "https://github.com/oneapi-src/oneTBB/archive/2017_U6.tar.gz"
+    TBB_URL = "https://github.com/oneapi-src/oneTBB/releases/download/v2021.1.1/oneapi-tbb-2021.1.1-lin.tgz"
 
 def InstallTBB(context, force, buildArgs):
     if Windows():
@@ -737,10 +759,9 @@ def InstallTBB_Windows(context, force, buildArgs):
         #                  "not built from source on this platform."
         #                  .format(buildArgs))
 
-        CopyFiles(context, "bin\\intel64\\vc14\\*.*", "bin")
-        CopyFiles(context, "lib\\intel64\\vc14\\*.*", "lib")
-        CopyDirectory(context, "include\\serial", "include\\serial")
-        CopyDirectory(context, "include\\tbb", "include\\tbb")
+        CopyFiles(context,     "lib\\intel64\\vc14\\*.*", "lib")
+        CopyDirectory(context, "include\\oneapi", "include\\oneapi")
+        CopyDirectory(context, "include\\tbb",    "include\\tbb")
 
 def InstallTBB_LinuxOrMacOS(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(TBB_URL, context, force)):
@@ -785,6 +806,24 @@ def InstallJPEG_Turbo(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(JPEG_URL, context, force)):
         RunCMake(context, force, buildArgs)
 
+        InstallDependency("/bin/cjpeg.exe",            "/jpeg/bin/cjpeg.exe")
+        InstallDependency("/bin/djpeg.exe",            "/jpeg/bin/djpeg.exe")
+        InstallDependency("/bin/jpeg62.dll",           "/jpeg/bin/jpeg62.dll")
+        InstallDependency("/bin/jpegtran.exe",         "/jpeg/bin/jpegtran.exe")
+        InstallDependency("/bin/rdjpgcom.exe",         "/jpeg/bin/rdjpgcom.exe")
+        InstallDependency("/bin/tjbench.exe",          "/jpeg/bin/tjbench.exe")
+        InstallDependency("/bin/turbojpeg.dll",        "/jpeg/bin/turbojpeg.dll")
+        InstallDependency("/bin/wrjpgcom.exe",         "/jpeg/bin/wrjpgcom.exe")
+        InstallDependency("/lib/jpeg.lib",             "/jpeg/lib/jpeg.lib")
+        InstallDependency("/lib/jpeg-static.lib",      "/jpeg/lib/jpeg-static.lib")
+        InstallDependency("/lib/turbojpeg.lib",        "/jpeg/lib/turbojpeg.lib")
+        InstallDependency("/lib/turbojpeg-static.lib", "/jpeg/lib/turbojpeg-static.lib")
+        InstallDependency("/include/jconfig.h",        "/jpeg/include/jconfig.h")
+        InstallDependency("/include/jerror.h",         "/jpeg/include/jerror.h")
+        InstallDependency("/include/jmorecfg.h",       "/jpeg/include/jmorecfg.h")
+        InstallDependency("/include/jpeglib.h",        "/jpeg/include/jpeglib.h")
+        InstallDependency("/include/turbojpeg.h",      "/jpeg/include/turbojpeg.h")
+
 def InstallJPEG_Lib(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(JPEG_URL, context, force)):
         Run('./configure --prefix="{libInstDir}" '
@@ -827,6 +866,15 @@ def InstallTIFF(context, force, buildArgs):
         extraArgs += buildArgs
         RunCMake(context, force, extraArgs)
 
+        InstallDependency("/bin/tiff.dll",            "/tiff/bin/tiff.dll")
+        InstallDependency("/bin/tiffxx.dll",          "/tiff/bin/tiffxx.dll")
+        InstallDependency("/lib/tiff.lib",            "/tiff/lib/tiff.lib")
+        InstallDependency("/include/tiff.h",          "/tiff/include/tiff.h")
+        InstallDependency("/include/tiffconf.h",      "/tiff/include/tiffconf.h")
+        InstallDependency("/include/tiffio.h",        "/tiff/include/tiffio.h")
+        InstallDependency("/include/tiffio.hxx",      "/tiff/include/tiffio.hxx")
+        InstallDependency("/include/tiffvers.h",      "/tiff/include/tiffvers.h")
+
 TIFF = Dependency("TIFF", InstallTIFF, "include/tiff.h")
 
 ############################################################
@@ -837,55 +885,61 @@ PNG_URL = "https://github.com/glennrp/libpng/archive/refs/tags/v1.6.35.zip"
 def InstallPNG(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(PNG_URL, context, force)):
         RunCMake(context, force, buildArgs)
+        
+        InstallDependency("/bin/libpng16.dll",        "/png/bin/libpng16.dll")
+        InstallDependency("/bin/pngfix.exe",          "/png/bin/pngfix.exe")
+        InstallDependency("/bin/png-fix-itxt.exe",    "/png/bin/png-fix-itxt.exe")
+        InstallDependency("/lib/libpng16.lib",        "/png/lib/libpng16.lib")
+        InstallDependency("/lib/libpng16_static.lib", "/png/lib/libpng16_static.lib")
+        InstallDependency("/lib/libpng",              "/png/lib/libpng")
+        InstallDependency("/include/pnglibconf.h",    "/png/include/pnglibconf.h")
+        InstallDependency("/include/pngconf.h",       "/png/include/pngconf.h")
+        InstallDependency("/include/png.h",           "/png/include/png.h")
+        InstallDependency("/include/libpng16",        "/png/include/libpng16")
 
 PNG = Dependency("PNG", InstallPNG, "include/png.h")
 
 ############################################################
-# IlmBase/OpenEXR
+# Imath/OpenEXR
 
-OPENEXR_URL   = "https://github.com/openexr/openexr/archive/v3.0.0-beta.zip"
-# IMATH_URL = "https://github.com/AcademySoftwareFoundation/Imath/archive/refs/tags/v3.0.0-beta.zip"
+OPENEXR_URL = "https://github.com/openexr/openexr/archive/v3.0.0-beta.zip"
+IMATH_URL   = "https://github.com/AcademySoftwareFoundation/Imath/archive/refs/tags/v3.0.0-beta.zip"
 
 def InstallOpenEXR(context, force, buildArgs):
-    srcDir = DownloadURL(OPENEXR_URL, context, force)
-
-    # ilmbaseSrcDir = os.path.join(srcDir, "")
-    # with CurrentWorkingDirectory(ilmbaseSrcDir):
-    #     # openexr 2.2 has a bug with Ninja:
-    #     # https://github.com/openexr/openexr/issues/94
-    #     # https://github.com/openexr/openexr/pull/142
-    #     # Fix commit here:
-    #     # https://github.com/openexr/openexr/commit/8eed7012c10f1a835385d750fd55f228d1d35df9
-    #     # Merged here:
-    #     # https://github.com/openexr/openexr/commit/b206a243a03724650b04efcdf863c7761d5d5d5b
-    #     if context.cmakeGenerator == "Ninja":
-    #         PatchFile(
-    #             os.path.join('Half', 'CMakeLists.txt'),
-    #             [
-    #                 ("TARGET eLut POST_BUILD",
-    #                  "OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/eLut.h"),
-    #                 ("  COMMAND eLut > ${CMAKE_CURRENT_BINARY_DIR}/eLut.h",
-    #                  "  COMMAND eLut ARGS > ${CMAKE_CURRENT_BINARY_DIR}/eLut.h\n"
-    #                     "  DEPENDS eLut"),
-    #                 ("TARGET toFloat POST_BUILD",
-    #                  "OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/toFloat.h"),
-    #                 ("  COMMAND toFloat > ${CMAKE_CURRENT_BINARY_DIR}/toFloat.h",
-    #                  "  COMMAND toFloat ARGS > ${CMAKE_CURRENT_BINARY_DIR}/toFloat.h\n"
-    #                     "  DEPENDS toFloat"),
-
-    #                 ("  ${CMAKE_CURRENT_BINARY_DIR}/eLut.h\n"
-    #                      "  OBJECT_DEPENDS\n"
-    #                      "  ${CMAKE_CURRENT_BINARY_DIR}/toFloat.h\n",
-    #                  '  "${CMAKE_CURRENT_BINARY_DIR}/eLut.h;${CMAKE_CURRENT_BINARY_DIR}/toFloat.h"\n'),
-    #             ],
-    #             multiLineMatches=True)
-    #     RunCMake(context, force, buildArgs)
-
-    openexrSrcDir = os.path.join(srcDir, "")
+    # OPENEXR
+    exrDir = DownloadURL(OPENEXR_URL, context, force)
+    openexrSrcDir = os.path.join(exrDir, "")
     with CurrentWorkingDirectory(openexrSrcDir):
         RunCMake(context, force,
                  ['-DILMBASE_PACKAGE_PREFIX="{libInstDir}"'
                   .format(libInstDir=context.libInstDir)] + buildArgs)
+    # IMATH
+    mathDir = DownloadURL(IMATH_URL, context, force)
+    imathSrcDir = os.path.join(mathDir, "")
+    with CurrentWorkingDirectory(imathSrcDir):
+        RunCMake(context, force,
+                 ['-DILMBASE_PACKAGE_PREFIX="{libInstDir}"'
+                  .format(libInstDir=context.libInstDir)] + buildArgs)
+
+    InstallDependency("/bin/exr2aces.exe",        "/openexr/bin/exr2aces.exe")
+    InstallDependency("/bin/exrenvmap.exe",       "/openexr/bin/exrenvmap.exe")
+    InstallDependency("/bin/exrheader.exe",       "/openexr/bin/exrheader.exe")
+    InstallDependency("/bin/exrmakepreview.exe",  "/openexr/bin/exrmakepreview.exe")
+    InstallDependency("/bin/exrmaketiled.exe",    "/openexr/bin/exrmaketiled.exe")
+    InstallDependency("/bin/exrmultipart.exe",    "/openexr/bin/exrmultipart.exe")
+    InstallDependency("/bin/exrstdattr.exe",      "/openexr/bin/exrstdattr.exe")
+    InstallDependency("/bin/Iex-3_0.dll",         "/openexr/bin/Iex-3_0.dll")
+    InstallDependency("/bin/IlmThread-3_0.dll",   "/openexr/bin/IlmThread-3_0.dll")
+    InstallDependency("/bin/Imath-3_0.dll",       "/openexr/bin/Imath-3_0.dll")
+    InstallDependency("/bin/OpenEXR-3_0.dll",     "/openexr/bin/OpenEXR-3_0.dll")
+    InstallDependency("/bin/OpenEXRUtil-3_0.dll", "/openexr/bin/OpenEXRUtil-3_0.dll")
+    InstallDependency("/lib/Iex-3_0.lib",         "/openexr/lib/Iex-3_0.lib")
+    InstallDependency("/lib/IlmThread-3_0.lib",   "/openexr/lib/IlmThread-3_0.lib")
+    InstallDependency("/lib/Imath-3_0.lib",       "/openexr/lib/Imath-3_0.lib")
+    InstallDependency("/lib/OpenEXR-3_0.lib",     "/openexr/lib/OpenEXR-3_0.lib")
+    InstallDependency("/lib/OpenEXRUtil-3_0.lib", "/openexr/lib/OpenEXRUtil-3_0.lib")
+    InstallDependency("/include/Imath",           "/openexr/include/Imath")
+    InstallDependency("/include/OpenEXR",         "/openexr/include/OpenEXR")
 
 OPENEXR = Dependency("OpenEXR", InstallOpenEXR, "include/OpenEXR/ImfVersion.h")
 
@@ -928,6 +982,16 @@ def InstallPtex_Windows(context, force, buildArgs):
 
         RunCMake(context, force, buildArgs)
 
+        InstallDependency("/bin/ptxinfo.exe",         "/ptex/bin/ptxinfo.exe")
+        InstallDependency("/lib/Ptex.dll",            "/ptex/lib/Ptex.dll")
+        InstallDependency("/lib/Ptex.lib",            "/ptex/lib/Ptex.lib")
+        InstallDependency("/lib/Ptexs.lib",           "/ptex/lib/Ptexs.lib")
+        InstallDependency("/include/PtexVersion.h",   "/ptex/include/PtexVersion.h")
+        InstallDependency("/include/PtexUtils.h",     "/ptex/include/PtexUtils.h")
+        InstallDependency("/include/Ptexture.h",      "/ptex/include/Ptexture.h")
+        InstallDependency("/include/PtexInt.h",       "/ptex/include/PtexInt.h")
+        InstallDependency("/include/PtexHalf.h",      "/ptex/include/PtexHalf.h")
+
 def InstallPtex_LinuxOrMacOS(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(PTEX_URL, context, force)):
         RunCMake(context, force, buildArgs)
@@ -945,6 +1009,11 @@ BLOSC_URL = "https://github.com/Blosc/c-blosc/archive/refs/tags/v1.21.0.zip"
 def InstallBLOSC(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(BLOSC_URL, context, force)):
         RunCMake(context, force, buildArgs)
+
+        InstallDependency("/lib/blosc.lib",          "/blosc/lib/blosc.lib")
+        InstallDependency("/lib/libblosc.lib",       "/blosc/lib/libblosc.lib")
+        InstallDependency("/include/blosc.h",        "/blosc/include/blosc.h")
+        InstallDependency("/include/blosc-export.h", "/blosc/include/blosc-export.h")
 
 BLOSC = Dependency("Blosc", InstallBLOSC, "include/blosc.h")
 
@@ -980,6 +1049,10 @@ def InstallOpenVDB(context, force, buildArgs):
         extraArgs += buildArgs
 
         RunCMake(context, force, extraArgs)
+
+        InstallDependency("/bin/openvdb.dll", "/openvdb/bin/openvdb.dll")
+        InstallDependency("/lib/openvdb.lib", "/openvdb/lib/openvdb.lib")
+        InstallDependency("/include/openvdb", "/openvdb/include/openvdb")
 
 OPENVDB = Dependency("OpenVDB", InstallOpenVDB, "include/openvdb/openvdb.h")
 
@@ -1018,6 +1091,12 @@ def InstallOpenImageIO(context, force, buildArgs):
         extraArgs += buildArgs
 
         RunCMake(context, force, extraArgs)
+
+        InstallDependency("/bin/OpenImageIO.dll",      "/OpenImageIO/bin/OpenImageIO.dll")
+        InstallDependency("/bin/OpenImageIO_Util.dll", "/OpenImageIO/bin/OpenImageIO_Util.dll")
+        InstallDependency("/lib/OpenImageIO.lib",      "/OpenImageIO/lib/OpenImageIO.lib")
+        InstallDependency("/lib/OpenImageIO_Util.lib", "/OpenImageIO/lib/OpenImageIO_Util.lib")
+        InstallDependency("/include/OpenImageIO",      "/OpenImageIO/include/OpenImageIO")
 
 OPENIMAGEIO = Dependency("OpenImageIO", InstallOpenImageIO, "include/OpenImageIO/oiioversion.h")
 
@@ -1064,6 +1143,10 @@ def InstallOpenColorIO(context, force, buildArgs):
         extraArgs += buildArgs
 
         RunCMake(context, force, extraArgs)
+
+        InstallDependency("/bin/OpenColorIO_2_0.dll", "/opencolorio/bin/OpenColorIO_2_0.dll")
+        InstallDependency("/lib/OpenColorIO_2_0.lib", "/opencolorio/lib/OpenColorIO_2_0.lib")
+        InstallDependency("/include/OpenColorIO",     "/opencolorio/include/OpenColorIO")
 
 OPENCOLORIO = Dependency("OpenColorIO", InstallOpenColorIO,
                          "include/OpenColorIO/OpenColorABI.h")
@@ -1117,6 +1200,10 @@ def InstallOpenSubdiv(context, force, buildArgs):
 
         try:
             RunCMake(context, force, extraArgs)
+
+            InstallDependency("/lib/osdCPU.lib",     "/opensubdiv/lib/osdCPU.lib")
+            InstallDependency("/lib/osdGPU.lib",     "/opensubdiv/lib/osdGPU.lib")
+            InstallDependency("/include/opensubdiv", "/opensubdiv/include/opensubdiv")
         finally:
             context.cmakeGenerator = oldGenerator
             context.numJobs = oldNumJobs
@@ -1135,10 +1222,12 @@ def InstallOSL(context, force, buildArgs):
             '-DOSL_BUILD_TESTS=OFF',
             '-DOSL_BUILD_MATERIALX=ON',
             '-DOIIO_LIBRARY_PATH={oiio_library_path}'.format(oiio_library_path="C:/Users/tyler/dev/lib/win64_vc15/lib"),
-            '-DBOOST_ROOT={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost"),
+            '-DBoost_ROOT={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost"),
+            '-DBoost_DIR={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost"),
+            '-DBoost_LIB_DIR={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost/lib"),
             '-Dpugixml_ROOT={pugixml_root_path}'.format(pugixml_root_path="C:/Users/tyler/dev/lib/win64_vc15/pugixml"),
             '-DLLVM_DIRECTORY={llvm_dir_path}'.format(llvm_dir_path="C:/Users/tyler/dev/lib/win64_vc15/llvm"),
-            '-LLVM_LIB_DIR={llvm_library_path}'.format(llvm_library_path="C:/Users/tyler/dev/lib/win64_vc15/llvm/lib"),
+            '-DLLVM_LIB_DIR={llvm_library_path}'.format(llvm_library_path="C:/Users/tyler/dev/lib/win64_vc15/llvm/lib"),
             '-DLLVM_ROOT={llvm_root_path}'.format(llvm_root_path="C:/Users/tyler/dev/lib/win64_vc15/llvm"),
             '-DLLVM_ROOT_DIR={llvm_root_path}'.format(llvm_root_path="C:/Users/tyler/dev/lib/win64_vc15/llvm"),
             '-DLLVM_INCLUDES={llvm_includes}'.format(llvm_includes="C:/Users/tyler/dev/lib/win64_vc15/llvm/include"),
@@ -1152,6 +1241,22 @@ def InstallOSL(context, force, buildArgs):
         extraArgs += buildArgs
 
         RunCMake(context, force, extraArgs)
+
+        InstallDependency("/bin/oslc.exe",        "/osl/bin/oslc.exe")
+        InstallDependency("/bin/oslinfo.exe",     "/osl/bin/oslinfo.exe")
+        InstallDependency("/bin/osltoy.exe",      "/osl/bin/osltoy.exe")
+        InstallDependency("/bin/oslcomp.dll",     "/osl/bin/oslcomp.dll")
+        InstallDependency("/bin/oslexec.dll",     "/osl/bin/oslexec.dll")
+        InstallDependency("/bin/oslnoise.dll",    "/osl/bin/oslnoise.dll")
+        InstallDependency("/bin/oslquery.dll",    "/osl/bin/oslquery.dll")
+        InstallDependency("/lib/osl.imageio.dll", "/osl/lib/osl.imageio.dll")
+        InstallDependency("/lib/oslcomp.lib",     "/osl/lib/oslcomp.lib")
+        InstallDependency("/lib/oslexec.lib",     "/osl/lib/oslexec.lib")
+        InstallDependency("/lib/oslnoise.lib",    "/osl/lib/oslnoise.lib")
+        InstallDependency("/lib/oslquery.lib",    "/osl/lib/oslquery.lib")
+        InstallDependency("/include/OSL",         "/osl/include/OSL")
+        InstallDependency("/share/doc/OSL",       "/osl/share/doc/OSL")
+        InstallDependency("/share/OSL",           "/osl/share/OSL")
 
 OSL = Dependency("OSL", InstallOSL, "include/OSL/oslversion.h")
 
@@ -1207,6 +1312,27 @@ def InstallHDF5(context, force, buildArgs):
                   '-DHDF5_BUILD_TOOLS=OFF',
                   '-DHDF5_BUILD_EXAMPLES=OFF'] + buildArgs)
 
+        InstallDependency("/bin/mirror_server.exe",      "/hdf5/bin/mirror_server.exe")
+        InstallDependency("/bin/mirror_server_stop.exe", "/hdf5/bin/mirror_server_stop.exe")
+        InstallDependency("/bin/hdf5.dll",               "/hdf5/bin/hdf5.dll")
+        InstallDependency("/bin/hdf5_cpp.dll",           "/hdf5/bin/hdf5_cpp.dll")
+        InstallDependency("/bin/hdf5_hl.dll",            "/hdf5/bin/hdf5_hl.dll")
+        InstallDependency("/bin/hdf5_hl_cpp.dll",        "/hdf5/bin/hdf5_hl_cpp.dll")
+        InstallDependency("/lib/hdf5.lib",               "/hdf5/lib/hdf5.lib")
+        InstallDependency("/lib/hdf5_cpp.lib",           "/hdf5/lib/hdf5_cpp.lib")
+        InstallDependency("/lib/hdf5_hl.lib",            "/hdf5/lib/hdf5_hl.lib")
+        InstallDependency("/lib/hdf5_hl_cpp.lib",        "/hdf5/lib/hdf5_hl_cpp.lib")
+        InstallDependency("/lib/libhdf5.lib",            "/hdf5/lib/libhdf5.lib")
+        InstallDependency("/lib/libhdf5_cpp.lib",        "/hdf5/lib/libhdf5_cpp.lib")
+        InstallDependency("/lib/libhdf5_hl.lib",         "/hdf5/lib/libhdf5_hl.lib")
+        InstallDependency("/lib/libhdf5_hl_cpp.lib",     "/hdf5/lib/libhdf5_hl_cpp.lib")
+        InstallDependency("/lib/libhdf5.settings",       "/hdf5/lib/libhdf5.settings")
+        for include in glob.glob(context.libInstDir + '/include/H5*.h'):
+            hdf5_include = ntpath.basename(include)
+            InstallDependency('/include/' + hdf5_include, "/hdf5/include/" + hdf5_include)
+        InstallDependency('/include/hdf5.h',    "/hdf5/include/hdf5.h")
+        InstallDependency('/include/hdf5_hl.h', "/hdf5/include/hdf5_hl.h")
+
 HDF5 = Dependency("HDF5", InstallHDF5, "include/hdf5.h")
 
 ############################################################
@@ -1229,14 +1355,17 @@ def InstallAlembic(context, force, buildArgs):
             '-DALEMBIC_ILMBASE_IEX_LIB="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/lib/Iex-3_0.lib"),
             '-DALEMBIC_ILMBASE_HALF_LIB="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/lib/Imath-3_0.lib"),
             '-DALEMBIC_ILMBASE_INCLUDE_DIRECTORY="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/include/Imath"),
-            '-DIMATH_DLL=ON',
+            '-DIMATH_DLL=1',
             '-DCMAKE_CXX_FLAGS="-DH5_BUILT_AS_DYNAMIC_LIB"']
         # else:
         #    cmakeOptions += ['-DUSE_HDF5=OFF']
 
         # cmakeOptions += buildArgs
-
         RunCMake(context, force, cmakeOptions)
+
+        InstallDependency("/lib/Alembic.dll", "/alembic/bin/Alembic.dll")
+        InstallDependency("/lib/Alembic.lib", "/alembic/lib/Alembic.lib")
+        InstallDependency("/include/Alembic", "/alembic/include/Alembic")
 
 ALEMBIC = Dependency("Alembic", InstallAlembic, "include/Alembic/Abc/Base.h")
 
@@ -1250,6 +1379,12 @@ def InstallDraco(context, force, buildArgs):
         cmakeOptions = ['-DBUILD_USD_PLUGIN=ON']
         cmakeOptions += buildArgs
         RunCMake(context, force, cmakeOptions)
+
+        InstallDependency("/bin/draco_encoder.exe", "/draco/bin/draco_encoder.exe")
+        InstallDependency("/bin/draco_decoder.exe", "/draco/bin/draco_decoder.exe")
+        InstallDependency("/lib/draco.lib",         "/draco/lib/draco.lib")
+        InstallDependency("/lib/draco.dll",         "/draco/lib/draco.dll")
+        InstallDependency("/include/draco",         "/draco/include/draco")
 
 DRACO = Dependency("Draco", InstallDraco, "include/draco/compression/decode.h")
 
@@ -1269,6 +1404,18 @@ def InstallMaterialX(context, force, buildArgs):
         cmakeOptions += buildArgs;
 
         RunCMake(context, force, cmakeOptions)
+
+        for lib in glob.glob(context.libInstDir + '/lib/MaterialX*.lib'):
+            materialx_lib = ntpath.basename(lib)
+            InstallDependency('/lib/' + materialx_lib, "/MaterialX/lib/" + materialx_lib)
+
+        for include in glob.glob(context.libInstDir + '/include/MaterialX*'):
+            materialx_include = ntpath.basename(include)
+            InstallDependency('/include/' + materialx_include, "/MaterialX/include/" + materialx_include)
+
+        InstallDependency('/libraries', "/MaterialX/libraries/")
+        InstallDependency('/mdl',       "/MaterialX/mdl/")
+        InstallDependency('/resources', "/MaterialX/resources/")
 
 MATERIALX = Dependency("MaterialX", InstallMaterialX, "include/MaterialXCore/Library.h")
 
@@ -1299,6 +1446,10 @@ def InstallEmbree(context, force, buildArgs):
         extraArgs += buildArgs
 
         RunCMake(context, force, extraArgs)
+
+        InstallDependency("/bin/embree3.dll", "/embree/bin/embree3.dll")
+        InstallDependency("/lib/embree3.lib", "/embree/lib/embree3.lib")
+        InstallDependency("/include/embree3", "/embree/include/embree3")
 
 EMBREE = Dependency("Embree", InstallEmbree, "include/embree3/rtcore.h")
 
@@ -1384,12 +1535,21 @@ class InstallContext:
         self.buildDebug = False
 
         # - DEPENDENCIES
+        self.buildZlib      = any("zlib"      in dep for dep in self.forceBuild)
+        self.buildTBB       = any("tbb"       in dep for dep in self.forceBuild)
         self.buildBoost     = any("boost"     in dep for dep in self.forceBuild)
         self.buildPtex      = any("ptex"      in dep for dep in self.forceBuild)
+        self.buildBlosc     = any("blosc"     in dep for dep in self.forceBuild)
+        self.buildPNG       = any("png"       in dep for dep in self.forceBuild)
+        self.buildJPEG      = any("jpeg"      in dep for dep in self.forceBuild)
+        self.buildTIFF      = any("tiff"      in dep for dep in self.forceBuild)
+        self.buildOpenEXR   = any("openexr"   in dep for dep in self.forceBuild)
         self.buildOpenVDB   = any("openvdb"   in dep for dep in self.forceBuild)
         self.buildEmbree    = any("embree"    in dep for dep in self.forceBuild)
+        self.buildHdf5      = any("hdf5"      in dep for dep in self.forceBuild)
         self.buildOIIO      = any("oiio"      in dep for dep in self.forceBuild)
         self.buildOCIO      = any("ocio"      in dep for dep in self.forceBuild)
+        self.buildOSD       = any("opensubd"  in dep for dep in self.forceBuild)
         self.buildAlembic   = any("alembic"   in dep for dep in self.forceBuild)
         self.buildDraco     = any("draco"     in dep for dep in self.forceBuild)
         self.buildMaterialX = any("materialx" in dep for dep in self.forceBuild)
@@ -1430,8 +1590,17 @@ if extraPythonPaths:
 
 requiredDependencies = []
 
+if context.buildZlib:
+    requiredDependencies += [ZLIB]
+
+if context.buildTBB:
+    requiredDependencies += [TBB]
+
 if context.buildBoost:
     requiredDependencies += [BOOST]
+
+if context.buildHdf5:
+    requiredDependencies += [HDF5]
 
 if context.buildAlembic:
     requiredDependencies += [ALEMBIC]
@@ -1439,26 +1608,47 @@ if context.buildAlembic:
 if context.buildDraco:
     requiredDependencies += [DRACO]
 
+if context.buildEmbree:
+    requiredDependencies += [EMBREE]
+
+if context.buildPtex:
+    requiredDependencies += [PTEX]
+
+if context.buildBlosc:
+    requiredDependencies += [BLOSC]
+
+if context.buildPNG:
+    requiredDependencies += [PNG]
+
+if context.buildJPEG:
+    requiredDependencies += [JPEG]
+
+if context.buildTIFF:
+    requiredDependencies += [TIFF]
+
+if context.buildOpenEXR:
+    requiredDependencies += [OPENEXR]
+
+if context.buildOpenVDB:
+    requiredDependencies += [OPENVDB]
+
+if context.buildOIIO:
+    requiredDependencies += [OPENIMAGEIO]
+
+if context.buildOSD:
+    requiredDependencies += [OPENSUBDIV]
+
+if context.buildOCIO:
+    requiredDependencies += [OPENCOLORIO]
+
 if context.buildMaterialX:
     requiredDependencies += [MATERIALX]
 
 if context.buildOSL:
     requiredDependencies += [OSL]
 
-if context.buildOpenVDB:
-    requiredDependencies += [OPENVDB]
-
-if context.buildOIIO:
-    requiredDependencies += [PTEX, OPENSUBDIV, BOOST, JPEG, TIFF, PNG, OPENEXR, OPENIMAGEIO]
-
 if context.buildAll:
-    requiredDependencies += [ZLIB, PTEX, OPENSUBDIV, BLOSC, BOOST, OPENEXR, HDF5, ALEMBIC, JPEG, TIFF, PNG, OPENIMAGEIO, OPENCOLORIO, OPENVDB, TBB, EMBREE, MATERIALX, DRACO]
-
-if context.buildOCIO:
-    requiredDependencies += [PTEX, OPENSUBDIV, OPENCOLORIO]
-
-if context.buildEmbree:
-    requiredDependencies += [PTEX, OPENSUBDIV, TBB, EMBREE]
+    requiredDependencies += [ZLIB, TBB, BOOST, HDF5, ALEMBIC, DRACO, EMBREE, PTEX, BLOSC, JPEG, TIFF, PNG, OPENEXR, OPENVDB, OPENIMAGEIO, OPENCOLORIO, OPENSUBDIV, TBB, EMBREE, MATERIALX, OSL, DRACO]
 
 # Assume zlib already exists on Linux platforms and don't build
 # our own. This avoids potential issues where a host application
@@ -1572,12 +1762,21 @@ BUILD SUMMARY:
   CMake toolset                 {cmakeToolset}
   Downloader                    {downloader}
 
+    Zlib                        {buildZlib}
+    TBB                         {buildTBB}
     Boost                       {buildBoost}
     Ptex                        {buildPtex}
+    Blosc                       {buildBlosc}
+    PNG                         {buildPNG}
+    JPEG                        {buildJPEG}
+    TIFF                        {buildTIFF}
+    OpenEXR                     {buildOpenEXR}
     OpenVDB                     {buildOpenVDB}
     Embree                      {buildEmbree}
+    Hdf5                        {buildHdf5}
     OpenImageIO                 {buildOIIO}
     OpenColorIO                 {buildOCIO}
+    OpenSubdiv                  {buildOSD}
     Alembic                     {buildAlembic}
     Draco                       {buildDraco}
     MaterialX                   {buildMaterialX}
@@ -1593,12 +1792,21 @@ BUILD SUMMARY:
     dependencies=("None" if not dependenciesToBuild else ", ".join([d.name for d in dependenciesToBuild])),
     # buildConfig=("Debug" if context.buildDebug else "Release"),
 
+    buildZlib=     ("On" if context.buildZlib       or context.buildAll else "Off"),
+    buildTBB=      ("On" if context.buildTBB        or context.buildAll else "Off"),
     buildBoost=    ("On" if context.buildBoost      or context.buildAll else "Off"),
     buildPtex=     ("On" if context.buildPtex       or context.buildAll else "Off"),
+    buildBlosc=    ("On" if context.buildBlosc      or context.buildAll else "Off"),
+    buildPNG=      ("On" if context.buildPNG        or context.buildAll else "Off"),
+    buildJPEG=     ("On" if context.buildJPEG       or context.buildAll else "Off"),
+    buildTIFF=     ("On" if context.buildTIFF       or context.buildAll else "Off"),
+    buildOpenEXR=  ("On" if context.buildOpenEXR    or context.buildAll else "Off"),
     buildOpenVDB=  ("On" if context.buildOpenVDB    or context.buildAll else "Off"),
     buildEmbree=   ("On" if context.buildEmbree     or context.buildAll else "Off"),
+    buildHdf5=     ("On" if context.buildHdf5       or context.buildAll else "Off"),
     buildOIIO=     ("On" if context.buildOIIO       or context.buildAll else "Off"),
     buildOCIO=     ("On" if context.buildOCIO       or context.buildAll else "Off"),
+    buildOSD=      ("On" if context.buildOSD        or context.buildAll else "Off"),
     buildAlembic=  ("On" if context.buildAlembic    or context.buildAll else "Off"),
     buildDraco=    ("On" if context.buildDraco      or context.buildAll else "Off"),
     buildMaterialX=("On" if context.buildMaterialX  or context.buildAll else "Off"),
