@@ -1040,10 +1040,10 @@ def InstallOpenVDB(context, force, buildArgs):
         extraArgs.append('-DBoost_NO_BOOST_CMAKE=On')
         extraArgs.append('-DBoost_NO_SYSTEM_PATHS=True')
 
-        extraArgs.append('-DBLOSC_ROOT="{libInstDir}"'.format(libInstDir='C:/Users/tyler/dev/lib/win64_vc15/blosc'))
-        extraArgs.append('-DTBB_ROOT="{libInstDir}"'.format(libInstDir='C:/Users/tyler/dev/lib/win64_vc15/tbb'))
+        extraArgs.append('-DBLOSC_ROOT="{libInstDir}"'.format(libInstDir=context.libInstDir + '/blosc'))
+        extraArgs.append('-DTBB_ROOT="{libInstDir}"'.format(libInstDir=context.libInstDir + '/tbb'))
         # OpenVDB needs Half type from IlmBase
-        extraArgs.append('-DILMBASE_ROOT={libInstDir}'.format(libInstDir='C:/Users/tyler/dev/lib/win64_vc15/openexr'))
+        extraArgs.append('-DILMBASE_ROOT={libInstDir}'.format(libInstDir=context.libInstDir + '/openexr'))
 
         # Add on any user-specified extra arguments.
         extraArgs += buildArgs
@@ -1082,8 +1082,8 @@ def InstallOpenImageIO(context, force, buildArgs):
 
         # Make sure to use boost installed by the build script and not any
         # system installed boost
-        extraArgs.append('-DJPEGTurbo_ROOT=C:/Users/tyler/dev/lib/win64_vc15/jpeg')
-        extraArgs.append('-DBoost_ROOT="C:/Users/tyler/dev/lib/win64_vc15/boost"')
+        extraArgs.append('-DJPEGTurbo_ROOT=' + context.libInstDir + '/jpeg')
+        extraArgs.append('-DBoost_ROOT=' + context.libInstDir + "/boost")
         extraArgs.append('-DBoost_NO_BOOST_CMAKE=On')
         extraArgs.append('-DBoost_NO_SYSTEM_PATHS=True')
 
@@ -1215,26 +1215,31 @@ OPENSUBDIV = Dependency("OpenSubdiv", InstallOpenSubdiv, "include/opensubdiv/ver
 
 OSL_URL = "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/archive/refs/tags/v1.11.12.0.zip"
 
+
+
 def InstallOSL(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(OSL_URL, context, force)):
         extraArgs = [
             '-DBUILD_SHARED_LIBS=ON',
             '-DOSL_BUILD_TESTS=OFF',
             '-DOSL_BUILD_MATERIALX=ON',
-            '-DOIIO_LIBRARY_PATH={oiio_library_path}'.format(oiio_library_path="C:/Users/tyler/dev/lib/win64_vc15/lib"),
-            '-DBoost_ROOT={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost"),
-            '-DBoost_DIR={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost"),
-            '-DBoost_LIB_DIR={boost_root_path}'.format(boost_root_path="C:/Users/tyler/dev/lib/win64_vc15/boost/lib"),
-            '-Dpugixml_ROOT={pugixml_root_path}'.format(pugixml_root_path="C:/Users/tyler/dev/lib/win64_vc15/pugixml"),
-            '-DLLVM_DIRECTORY={llvm_dir_path}'.format(llvm_dir_path="C:/Users/tyler/dev/lib/win64_vc15/llvm"),
-            '-DLLVM_LIB_DIR={llvm_library_path}'.format(llvm_library_path="C:/Users/tyler/dev/lib/win64_vc15/llvm/lib"),
-            '-DLLVM_ROOT={llvm_root_path}'.format(llvm_root_path="C:/Users/tyler/dev/lib/win64_vc15/llvm"),
-            '-DLLVM_ROOT_DIR={llvm_root_path}'.format(llvm_root_path="C:/Users/tyler/dev/lib/win64_vc15/llvm"),
-            '-DLLVM_INCLUDES={llvm_includes}'.format(llvm_includes="C:/Users/tyler/dev/lib/win64_vc15/llvm/include"),
-            '-DBISON_ROOT={bison_dir}'.format(bison_dir="C:/Users/tyler/dev/lib/win64_vc15/flex"),
-            '-DFLEX_ROOT={flex_dir}'.format(flex_dir="C:/Users/tyler/dev/lib/win64_vc15/flex"),
-            "-Dpartio_ROOT={partio_dir}".format(partio_dir="C:/Users/tyler/dev/lib/win64_vc15/partio"),
-            "-Dpartio_DIR={partio_dir}".format(partio_dir="C:/Users/tyler/dev/lib/win64_vc15/partio")
+            '-DOIIO_LIBRARY_PATH={oiio_library_path}'.format(oiio_library_path=context.libInstDir + "/lib"),
+            '-DBoost_FOUND={boost_found}'.format(boost_found="TRUE"),
+            '-DBoost_ROOT={boost_root_path}'.format(boost_root_path=context.libInstDir + "/boost"),
+            '-DBoost_DIR={boost_root_path}'.format(boost_root_path=context.libInstDir + "/boost"),
+            '-DBoost_LIB_DIR={boost_root_path}'.format(boost_root_path=context.libInstDir + "/boost/lib"),
+            '-DBoost_INCLUDE_DIRS={boost_include}'.format(boost_include=context.libInstDir + "/boost/include/boost-1_76"),
+            '-DBoost_LIBRARIES={boost_root_path}'.format(boost_root_path=context.libInstDir + "/boost/lib/boost_atomic-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_chrono-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_date_time-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_filesystem-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_iostreams-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_numpy39-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_python39-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_program_options-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_regex-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_system-vc142-mt-x64-1_76.lib;" + context.libInstDir + "/boost/lib/boost_thread-vc142-mt-x64-1_76.lib"),
+            '-Dpugixml_ROOT={pugixml_root_path}'.format(pugixml_root_path=context.libInstDir + "/pugixml"),
+            '-DLLVM_DIRECTORY={llvm_dir_path}'.format(llvm_dir_path=context.libInstDir + "/llvm"),
+            '-DLLVM_LIB_DIR={llvm_library_path}'.format(llvm_library_path=context.libInstDir + "/llvm/lib"),
+            '-DLLVM_ROOT={llvm_root_path}'.format(llvm_root_path=context.libInstDir + "/llvm"),
+            '-DLLVM_ROOT_DIR={llvm_root_path}'.format(llvm_root_path=context.libInstDir + "/llvm"),
+            '-DLLVM_INCLUDES={llvm_includes}'.format(llvm_includes=context.libInstDir + "/llvm/include"),
+            '-DBISON_ROOT={bison_dir}'.format(bison_dir=context.libInstDir + "/flex"),
+            '-DFLEX_ROOT={flex_dir}'.format(flex_dir=context.libInstDir + "/flex"),
+            "-Dpartio_ROOT={partio_dir}".format(partio_dir=context.libInstDir + "/partio"),
+            "-Dpartio_DIR={partio_dir}".format(partio_dir=context.libInstDir + "/partio")
         ]
 
         # Add on any user-specified extra arguments.
@@ -1348,13 +1353,13 @@ def InstallAlembic(context, force, buildArgs):
             # it was built with CMake as a dynamic library.
         cmakeOptions += [
             '-DUSE_HDF5=ON',
-            '-DHDF5_ROOT="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/hdf5"),
-            '-DILMBASE_ROOT="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr"),
-            '-DALEMBIC_ILMBASE_IMATH_LIB="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/lib/Imath-3_0.lib"),
-            '-DALEMBIC_ILMBASE_ILMTHREAD_LIB="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/lib/IlmThread-3_0.lib"),
-            '-DALEMBIC_ILMBASE_IEX_LIB="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/lib/Iex-3_0.lib"),
-            '-DALEMBIC_ILMBASE_HALF_LIB="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/lib/Imath-3_0.lib"),
-            '-DALEMBIC_ILMBASE_INCLUDE_DIRECTORY="{libInstDir}"'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/openexr/include/Imath"),
+            '-DHDF5_ROOT="{libInstDir}"'.format(libInstDir=context.libInstDir + "/hdf5"),
+            '-DILMBASE_ROOT="{libInstDir}"'.format(libInstDir=context.libInstDir + "/openexr"),
+            '-DALEMBIC_ILMBASE_IMATH_LIB="{libInstDir}"'.format(libInstDir=context.libInstDir + "/openexr/lib/Imath-3_0.lib"),
+            '-DALEMBIC_ILMBASE_ILMTHREAD_LIB="{libInstDir}"'.format(libInstDir=context.libInstDir + "/openexr/lib/IlmThread-3_0.lib"),
+            '-DALEMBIC_ILMBASE_IEX_LIB="{libInstDir}"'.format(libInstDir=context.libInstDir + "/openexr/lib/Iex-3_0.lib"),
+            '-DALEMBIC_ILMBASE_HALF_LIB="{libInstDir}"'.format(libInstDir=context.libInstDir + "/openexr/lib/Imath-3_0.lib"),
+            '-DALEMBIC_ILMBASE_INCLUDE_DIRECTORY="{libInstDir}"'.format(libInstDir=context.libInstDir + "/openexr/include/Imath"),
             '-DIMATH_DLL=1',
             '-DCMAKE_CXX_FLAGS="-DH5_BUILT_AS_DYNAMIC_LIB"']
         # else:
@@ -1431,7 +1436,7 @@ else:
 def InstallEmbree(context, force, buildArgs):
     with CurrentWorkingDirectory(DownloadURL(EMBREE_URL, context, force)):
         extraArgs = [
-            '-DTBB_ROOT={libInstDir}'.format(libInstDir="C:/Users/tyler/dev/lib/win64_vc15/tbb"),
+            '-DTBB_ROOT={libInstDir}'.format(libInstDir=context.libInstDir + "/tbb"),
             '-DEMBREE_TUTORIALS=OFF',
             '-DEMBREE_ISPC_SUPPORT=OFF'
         ]
